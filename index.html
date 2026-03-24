@@ -108,7 +108,7 @@
             {number}
           </div>
           <h4 className="text-base font-bold text-zinc-900 mb-2">{title}</h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-zinc-50 p-3 rounded-md border border-zinc-100">
               <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Puntos a Hablar</p>
               <ul className="text-sm text-zinc-700 space-y-1 list-disc pl-4">
@@ -126,7 +126,7 @@
       // --- VIEWS ---
       const DashboardView = () => (
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard title="Eventos Activos (Este Mes)" value="12" icon="Building2" trend="+2 vs mes pasado" />
             <StatCard title="Propuestas Enviadas" value="8" icon="Presentation" trend="3 pendientes de firma" />
             <StatCard title="Capacidad de Equipo" value="85%" icon="Users" trend="Alta ocupación" />
@@ -212,9 +212,9 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
         const canGenerate = !isGenerating && formData.industry && formData.eventType;
 
         return (
-          <div className="max-w-5xl mx-auto flex gap-8">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-6">
             {/* Formulario */}
-            <div className="w-1/3 bg-white rounded-xl border border-zinc-200 p-6 self-start">
+            <div className="w-full md:w-1/3 bg-white rounded-xl border border-zinc-200 p-5 md:p-6 self-start">
               <div className="mb-5">
                 <h3 className="text-base font-bold flex items-center gap-2 text-zinc-900">
                   <Icon name="Sparkles" size={17} className="text-zinc-500" /> El Embudo de 4 Datos
@@ -300,7 +300,7 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
             </div>
 
             {/* Resultados */}
-            <div className="w-2/3 flex flex-col gap-6">
+            <div className="w-full md:w-2/3 flex flex-col gap-6">
               {!slides && !isGenerating && (
                 <div className="rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-12 flex flex-col items-center justify-center text-center" style={{minHeight: '420px'}}>
                   <Icon name="Presentation" size={44} className="text-zinc-300 mb-4" />
@@ -372,11 +372,11 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
 
         return (
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white p-8 rounded-xl border border-zinc-200">
+            <div className="bg-white p-5 md:p-8 rounded-xl border border-zinc-200">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-zinc-900">
                 <Icon name="Calculator" size={22} className="text-zinc-500" /> Calculadora y Narrativa de Presupuesto
               </h3>
-              <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-1">Asistentes</label>
                   <input type="number" value={asistentes} onChange={e => setAsistentes(+e.target.value)} className="w-full border border-zinc-300 rounded-md p-2 text-sm" />
@@ -400,9 +400,9 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
                     "Para garantizar el éxito de su evento de <strong>{dias} {dias === 1 ? 'día' : 'días'}</strong> con <strong>{asistentes.toLocaleString()} asistentes</strong>, hemos estructurado una inversión estratégica de <strong style={{color: '#16a34a'}}>${(+total).toLocaleString()} MXN</strong>. Esta propuesta nivel <strong>{nivel === 'premium' ? 'Premium' : 'Estándar'}</strong> no es solo un gasto logístico, sino una inversión en la retención de su audiencia y en la imagen corporativa de su marca, asegurando tecnología audiovisual de punta y una gestión operativa impecable por parte del equipo de SAC."
                   </p>
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-4xl font-bold text-zinc-900">${(+total).toLocaleString()} <span className="text-lg text-zinc-400 font-normal">MXN</span></div>
-                  <button className="flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-md" style={{background: '#111111'}}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="text-3xl md:text-4xl font-bold text-zinc-900">${(+total).toLocaleString()} <span className="text-lg text-zinc-400 font-normal">MXN</span></div>
+                  <button className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-md" style={{background: '#111111'}}>
                     Exportar PDF Oficial <Icon name="ArrowRight" size={15} />
                   </button>
                 </div>
@@ -423,20 +423,44 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
         </div>
       );
 
+      // --- BOTTOM NAV (mobile) ---
+      const BottomNav = ({ activeTab, setActiveTab }) => {
+        const items = [
+          { id: 'dashboard', icon: 'LayoutDashboard', label: 'Dashboard' },
+          { id: 'presentation', icon: 'Presentation', label: 'Slides' },
+          { id: 'budget', icon: 'Calculator', label: 'Presupuestos' },
+          { id: 'schedule', icon: 'CalendarDays', label: 'Agenda' },
+        ];
+        return (
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex border-t border-zinc-200" style={{background: '#111111'}}>
+            {items.map(item => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors"
+                style={{color: activeTab === item.id ? '#ffffff' : 'rgba(255,255,255,0.4)'}}
+              >
+                <Icon name={item.icon} size={20} />
+                <span className="text-xs font-medium leading-tight">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        );
+      };
+
       // --- MAIN APP ---
       const App = () => {
         const [activeTab, setActiveTab] = useState('presentation');
         const tabs = {
-          dashboard: 'Visión General de Eventos',
-          presentation: 'Consola de Presentaciones de Alto Valor',
-          budget: 'Generador Inteligente de Cotizaciones',
-          schedule: 'Agendador Automático',
+          dashboard: 'Visión General',
+          presentation: 'Creador de Slides',
+          budget: 'Cotizaciones',
+          schedule: 'Agenda',
         };
         return (
           <div className="flex h-screen text-zinc-800" style={{fontFamily: "'Inter', sans-serif", background: '#f7f7f7'}}>
-            {/* Sidebar */}
-            <aside className="w-56 flex flex-col z-10" style={{background: '#111111', color: 'white', flexShrink: 0}}>
-              {/* Logo */}
+            {/* Sidebar — solo desktop */}
+            <aside className="hidden md:flex w-56 flex-col z-10" style={{background: '#111111', color: 'white', flexShrink: 0}}>
               <div className="px-5 py-6 flex items-center gap-3 border-b border-white border-opacity-10">
                 <div className="sac-mark"></div>
                 <div>
@@ -444,15 +468,12 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
                   <p className="text-xs leading-tight" style={{color: 'rgba(255,255,255,0.4)'}}>Plataforma IA v1.0</p>
                 </div>
               </div>
-
               <nav className="flex-1 px-3 py-4 space-y-0.5">
                 <NavItem icon="LayoutDashboard" label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
                 <NavItem icon="Presentation" label="Creador de Slides" active={activeTab === 'presentation'} onClick={() => setActiveTab('presentation')} />
                 <NavItem icon="Calculator" label="Presupuestos" active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} />
                 <NavItem icon="CalendarDays" label="Agenda Automatizada" active={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')} />
               </nav>
-
-              {/* User */}
               <div className="px-4 py-4 border-t border-white border-opacity-10">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-white text-zinc-900">Z</div>
@@ -465,20 +486,36 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
             </aside>
 
             {/* Main */}
-            <main className="flex-1 overflow-y-auto">
-              <header className="bg-white border-b border-zinc-200 px-8 py-4 flex justify-between items-center sticky top-0 z-0">
-                <h2 className="text-base font-semibold text-zinc-900">{tabs[activeTab]}</h2>
-                <span className="text-sm text-zinc-400 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full inline-block" style={{background: '#22c55e'}}></span> IA Operativa
-                </span>
+            <main className="flex-1 overflow-y-auto" style={{paddingBottom: '64px'}}>
+              {/* Header mobile: logo + estado */}
+              <header className="bg-white border-b border-zinc-200 sticky top-0 z-40" style={{padding: '12px 16px'}}>
+                <div className="flex justify-between items-center">
+                  {/* Logo solo en mobile */}
+                  <div className="flex md:hidden items-center gap-2">
+                    <div className="sac-mark" style={{width: 28, height: 28}}></div>
+                    <span className="font-extrabold text-zinc-900 text-sm tracking-wide">SACToolkit</span>
+                  </div>
+                  {/* Título solo en desktop */}
+                  <h2 className="hidden md:block text-base font-semibold text-zinc-900">{tabs[activeTab]}</h2>
+                  <span className="text-xs text-zinc-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full inline-block" style={{background: '#22c55e'}}></span>
+                    <span className="hidden sm:inline">IA Operativa</span>
+                  </span>
+                </div>
+                {/* Título debajo en mobile */}
+                <p className="md:hidden text-xs font-medium text-zinc-500 mt-1">{tabs[activeTab]}</p>
               </header>
-              <div className="p-8">
+
+              <div className="p-4 md:p-8">
                 {activeTab === 'dashboard' && <DashboardView />}
                 {activeTab === 'presentation' && <PresentationToolkit />}
                 {activeTab === 'budget' && <BudgetGenerator />}
                 {activeTab === 'schedule' && <ScheduleView />}
               </div>
             </main>
+
+            {/* Bottom nav mobile */}
+            <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
         );
       };
