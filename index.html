@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAC Toolkit AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      body { font-family: 'Inter', sans-serif; background: #f7f7f7; }
+      .animate-spin { animation: spin 1s linear infinite; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      /* SAC diagonal stripe logo mark */
+      .sac-mark {
+        width: 36px; height: 36px;
+        background: #111;
+        position: relative; overflow: hidden; border-radius: 4px; flex-shrink: 0;
+      }
+      .sac-mark::before {
+        content: '';
+        position: absolute; inset: -10px;
+        background: repeating-linear-gradient(
+          -45deg,
+          transparent, transparent 4px,
+          rgba(255,255,255,0.85) 4px, rgba(255,255,255,0.85) 6px
+        );
+      }
+      .sac-mark::after {
+        content: 'SAC';
+        position: absolute; bottom: 3px; right: 4px;
+        font-size: 8px; font-weight: 800; color: white; letter-spacing: 0.05em;
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      const Icon = ({ name, size = 20, className = '' }) => {
+        const ref = useRef(null);
+        useEffect(() => {
+          if (ref.current && window.lucide) {
+            ref.current.innerHTML = '';
+            const icon = lucide.createElement(lucide[name] || lucide.HelpCircle);
+            icon.setAttribute('width', size);
+            icon.setAttribute('height', size);
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke-width', '2');
+            icon.setAttribute('stroke-linecap', 'round');
+            icon.setAttribute('stroke-linejoin', 'round');
+            if (className) icon.setAttribute('class', className);
+            ref.current.appendChild(icon);
+          }
+        }, [name, size, className]);
+        return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} style={{width: size, height: size, flexShrink: 0}} />;
+      };
+
+      // --- HELPER COMPONENTS ---
+      const NavItem = ({ icon, label, active, onClick }) => (
+        <button
+          onClick={onClick}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm font-medium"
+          style={{
+            background: active ? '#ffffff' : 'transparent',
+            color: active ? '#111111' : 'rgba(255,255,255,0.65)',
+          }}
+          onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.95)'; }}
+          onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
+        >
+          <Icon name={icon} size={17} /> {label}
+        </button>
+      );
+
+      const StatCard = ({ title, value, icon, trend }) => (
+        <div className="bg-white p-6 rounded-xl border border-zinc-200">
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+              <Icon name={icon} size={20} className="text-zinc-500" />
+            </div>
+          </div>
+          <h4 className="text-3xl font-bold text-zinc-900 mb-1">{value}</h4>
+          <p className="text-sm font-medium text-zinc-500 mb-2">{title}</p>
+          <p className="text-xs text-zinc-400">{trend}</p>
+        </div>
+      );
+
+      const EventRow = ({ date, name, status, color }) => (
+        <div className="flex items-center justify-between p-3 hover:bg-zinc-50 rounded-lg border border-transparent hover:border-zinc-100 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="w-16 text-center font-bold text-zinc-900 bg-zinc-100 py-1 rounded-md text-sm">{date}</div>
+            <div className="font-medium text-zinc-700">{name}</div>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${color}`}>{status}</span>
+        </div>
+      );
+
+      const SlideCard = ({ number, title, points, visual }) => (
+        <div className="relative pl-12">
+          <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-900 text-white font-bold flex items-center justify-center text-xs border border-zinc-800">
+            {number}
+          </div>
+          <h4 className="text-base font-bold text-zinc-900 mb-2">{title}</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-zinc-50 p-3 rounded-md border border-zinc-100">
+              <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Puntos a Hablar</p>
+              <ul className="text-sm text-zinc-700 space-y-1 list-disc pl-4">
+                {points.map((p, i) => <li key={i}>{p}</li>)}
+              </ul>
+            </div>
+            <div className="bg-zinc-900 p-3 rounded-md">
+              <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Instrucción Visual</p>
+              <p className="text-sm text-zinc-200 italic">"{visual}"</p>
+            </div>
+          </div>
+        </div>
+      );
+
+      // --- VIEWS ---
+      const DashboardView = () => (
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="grid grid-cols-3 gap-6">
+            <StatCard title="Eventos Activos (Este Mes)" value="12" icon="Building2" trend="+2 vs mes pasado" />
+            <StatCard title="Propuestas Enviadas" value="8" icon="Presentation" trend="3 pendientes de firma" />
+            <StatCard title="Capacidad de Equipo" value="85%" icon="Users" trend="Alta ocupación" />
+          </div>
+          <div className="bg-white rounded-xl border border-zinc-200 p-6">
+            <h3 className="text-lg font-bold mb-4 text-zinc-900">Próximos 15 días</h3>
+            <div className="space-y-2">
+              <EventRow date="15 Oct" name="Congreso Médico Nacional" status="Confirmado" color="bg-green-100 text-green-700" />
+              <EventRow date="18 Oct" name="Lanzamiento Auto Eléctrico" status="Tentativo" color="bg-orange-100 text-orange-700" />
+              <EventRow date="22 Oct" name="Convención Ventas Seguros" status="Confirmado" color="bg-green-100 text-green-700" />
+            </div>
+          </div>
+        </div>
+      );
+
+      const PresentationToolkit = () => {
+        const [isGenerating, setIsGenerating] = useState(false);
+        const [slides, setSlides] = useState(null);
+        const [error, setError] = useState(null);
+        const [apiKey, setApiKey] = useState('');
+        const [formData, setFormData] = useState({ industry: '', eventType: '', differentiator: '', tone: '' });
+
+        const buildPrompt = (data) => `Actúa como un experto en ventas B2B y diseñador de presentaciones para "SAC Convenciones", empresa organizadora de eventos corporativos en México.
+Necesito una estructura de presentación para un cliente de la industria ${data.industry}.
+El evento que les vamos a organizar es un ${data.eventType}.
+Nuestro diferenciador principal para ganar este pitch será: ${data.differentiator || 'Experiencia inmersiva y tecnología de punta'}.
+El tono de la presentación debe ser: ${data.tone}.
+
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional:
+{
+  "slides": [
+    {
+      "number": "01",
+      "title": "Título impactante del slide",
+      "points": ["Punto clave 1", "Punto clave 2", "Punto clave 3"],
+      "visual": "Descripción de la imagen o gráfico sugerido para el fondo"
+    }
+  ]
+}
+Genera exactamente 5 slides que construyan una narrativa de venta persuasiva para SAC Convenciones.`;
+
+        const handleGenerate = async () => {
+          if (!apiKey.trim()) { setError('Ingresa tu API Key de Gemini para continuar.'); return; }
+          setIsGenerating(true);
+          setSlides(null);
+          setError(null);
+          const prompt = buildPrompt(formData);
+          try {
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey.trim()}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { responseMimeType: 'application/json', temperature: 0.8 }
+                })
+              }
+            );
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData?.error?.message || `Error ${res.status}`);
+            }
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const parsed = JSON.parse(text);
+            if (!parsed.slides || !Array.isArray(parsed.slides)) throw new Error('Respuesta inesperada de la IA.');
+            setSlides(parsed.slides);
+          } catch (err) {
+            setError(`Error al conectar con Gemini: ${err.message}`);
+          } finally {
+            setIsGenerating(false);
+          }
+        };
+
+        const hiddenPrompt = buildPrompt({
+          industry: formData.industry || 'Tecnológica',
+          eventType: formData.eventType || 'Lanzamiento de Producto',
+          differentiator: formData.differentiator || 'Innovación y Experiencia Inmersiva',
+          tone: formData.tone || 'Creativo y Disruptivo',
+        });
+
+        const canGenerate = !isGenerating && formData.industry && formData.eventType;
+
+        return (
+          <div className="max-w-5xl mx-auto flex gap-8">
+            {/* Formulario */}
+            <div className="w-1/3 bg-white rounded-xl border border-zinc-200 p-6 self-start">
+              <div className="mb-5">
+                <h3 className="text-base font-bold flex items-center gap-2 text-zinc-900">
+                  <Icon name="Sparkles" size={17} className="text-zinc-500" /> El Embudo de 4 Datos
+                </h3>
+                <p className="text-sm text-zinc-400 mt-1">La IA hará el trabajo pesado por ti.</p>
+              </div>
+              <div className="space-y-4">
+                {/* API Key */}
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Icon name="KeyRound" size={12} /> Gemini API Key
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="AIza..."
+                    value={apiKey}
+                    onChange={e => { setApiKey(e.target.value); setError(null); }}
+                    className="w-full border border-zinc-300 rounded-md p-2 text-sm outline-none font-mono"
+                    style={{'--tw-ring-color': '#111'}}
+                  />
+                  <p className="text-xs text-zinc-400 mt-1">Tu key no sale de tu navegador.</p>
+                </div>
+
+                <div className="border-t border-zinc-100 pt-3">
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Datos del Evento</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">1. Industria del Cliente</label>
+                  <select className="w-full border border-zinc-300 rounded-md p-2 text-sm outline-none bg-white" onChange={(e) => setFormData({ ...formData, industry: e.target.value })}>
+                    <option value="">Selecciona industria...</option>
+                    <option value="Farmacéutica">Farmacéutica</option>
+                    <option value="Automotriz">Automotriz</option>
+                    <option value="Tecnología (SaaS / IT)">Tecnología (SaaS / IT)</option>
+                    <option value="Financiera / Banca">Financiera / Banca</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">2. ¿Qué le vamos a organizar?</label>
+                  <select className="w-full border border-zinc-300 rounded-md p-2 text-sm outline-none bg-white" onChange={(e) => setFormData({ ...formData, eventType: e.target.value })}>
+                    <option value="">Tipo de evento...</option>
+                    <option value="Congreso Anual">Congreso Anual</option>
+                    <option value="Lanzamiento de Producto">Lanzamiento de Producto</option>
+                    <option value="Viaje de Incentivo">Viaje de Incentivo</option>
+                    <option value="Fiesta de Fin de Año">Fiesta de Fin de Año</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">3. Diferenciador de SAC</label>
+                  <input type="text" placeholder="Ej: Tecnología LED inmersiva..." className="w-full border border-zinc-300 rounded-md p-2 text-sm outline-none bg-white" onChange={(e) => setFormData({ ...formData, differentiator: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">4. Tono de la Presentación</label>
+                  <select className="w-full border border-zinc-300 rounded-md p-2 text-sm outline-none bg-white" onChange={(e) => setFormData({ ...formData, tone: e.target.value })}>
+                    <option value="">Selecciona el tono...</option>
+                    <option value="Ultra Formal y Corporativo">Ultra Formal y Corporativo</option>
+                    <option value="Creativo, Disruptivo y Moderno">Creativo, Disruptivo y Moderno</option>
+                    <option value="Emocional e Inspirador">Emocional e Inspirador</option>
+                  </select>
+                </div>
+
+                {error && (
+                  <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md p-2 flex items-start gap-1.5">
+                    <Icon name="AlertCircle" size={13} className="mt-0.5 shrink-0" />{error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={!canGenerate}
+                  style={{
+                    background: canGenerate ? '#111111' : '#d4d4d8',
+                    cursor: canGenerate ? 'pointer' : 'not-allowed',
+                  }}
+                  className="w-full mt-2 py-3 rounded-md font-semibold text-white flex items-center justify-center gap-2 text-sm transition-all"
+                >
+                  {isGenerating
+                    ? <><span className="inline-block animate-spin mr-1"><Icon name="Loader2" size={16} /></span> Generando con Gemini...</>
+                    : <><Icon name="Sparkles" size={16} /> Crear Presentación Maestra</>
+                  }
+                </button>
+              </div>
+            </div>
+
+            {/* Resultados */}
+            <div className="w-2/3 flex flex-col gap-6">
+              {!slides && !isGenerating && (
+                <div className="rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-12 flex flex-col items-center justify-center text-center" style={{minHeight: '420px'}}>
+                  <Icon name="Presentation" size={44} className="text-zinc-300 mb-4" />
+                  <h4 className="text-lg font-semibold text-zinc-600">El lienzo está en blanco</h4>
+                  <p className="max-w-sm mt-2 text-zinc-400 text-sm">Llena el formulario e ingresa tu API Key de Gemini. La IA estructurará el guion perfecto para cerrar la venta.</p>
+                </div>
+              )}
+
+              {isGenerating && (
+                <div className="bg-white rounded-xl border border-zinc-200 p-12 flex flex-col items-center justify-center text-center" style={{minHeight: '420px'}}>
+                  <div className="relative w-16 h-16 mb-6">
+                    <div className="absolute inset-0 border-4 border-zinc-100 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-zinc-900 rounded-full animate-spin" style={{borderTopColor: 'transparent'}}></div>
+                  </div>
+                  <h4 className="text-lg font-bold text-zinc-800">Gemini está diseñando la estrategia...</h4>
+                  <p className="text-sm text-zinc-400 mt-2">Aplicando prompt de ventas B2B y estructurando 5 slides.</p>
+                </div>
+              )}
+
+              {slides && (
+                <>
+                  {/* Prompt visible — el gancho educativo del demo */}
+                  <div className="bg-zinc-900 rounded-xl p-5">
+                    <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Icon name="Sparkles" size={13} /> Detrás de escena — Prompt Maestro enviado a Gemini
+                    </h4>
+                    <pre className="text-zinc-300 text-xs font-mono leading-relaxed bg-black p-4 rounded-lg whitespace-pre-wrap overflow-auto" style={{maxHeight: '200px'}}>{hiddenPrompt}</pre>
+                  </div>
+
+                  {/* Output dinámico */}
+                  <div className="bg-white rounded-xl border border-zinc-200 p-6">
+                    <div className="flex justify-between items-center mb-5 border-b border-zinc-100 pb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-zinc-900">Presentación lista</h3>
+                        <p className="text-xs text-zinc-400 mt-0.5">{formData.industry} · {formData.eventType}</p>
+                      </div>
+                      <button
+                        onClick={() => navigator.clipboard && navigator.clipboard.writeText(hiddenPrompt)}
+                        className="text-xs border border-zinc-200 hover:bg-zinc-50 text-zinc-600 py-1.5 px-3 rounded font-medium transition-colors"
+                      >
+                        Copiar Prompt
+                      </button>
+                    </div>
+                    <div className="space-y-6">
+                      {slides.map((slide, i) => (
+                        <SlideCard
+                          key={i}
+                          number={slide.number || String(i + 1).padStart(2, '0')}
+                          title={slide.title}
+                          points={Array.isArray(slide.points) ? slide.points : [slide.points]}
+                          visual={slide.visual}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      const BudgetGenerator = () => {
+        const [asistentes, setAsistentes] = useState(500);
+        const [dias, setDias] = useState(3);
+        const [nivel, setNivel] = useState('premium');
+        const base = nivel === 'premium' ? 300 : 150;
+        const total = (asistentes * base * dias / 1000).toFixed(0);
+
+        return (
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white p-8 rounded-xl border border-zinc-200">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-zinc-900">
+                <Icon name="Calculator" size={22} className="text-zinc-500" /> Calculadora y Narrativa de Presupuesto
+              </h3>
+              <div className="grid grid-cols-3 gap-6 mb-8">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Asistentes</label>
+                  <input type="number" value={asistentes} onChange={e => setAsistentes(+e.target.value)} className="w-full border border-zinc-300 rounded-md p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Días de Evento</label>
+                  <input type="number" value={dias} onChange={e => setDias(+e.target.value)} className="w-full border border-zinc-300 rounded-md p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Nivel de Producción</label>
+                  <select value={nivel} onChange={e => setNivel(e.target.value)} className="w-full border border-zinc-300 rounded-md p-2 text-sm bg-white">
+                    <option value="premium">Premium (LED + Line Array)</option>
+                    <option value="estandar">Estándar</option>
+                  </select>
+                </div>
+              </div>
+              <div className="border-t border-zinc-200 pt-6">
+                <div className="bg-zinc-50 p-6 rounded-lg mb-6 border border-zinc-100">
+                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Resumen Ejecutivo Generado por IA</h4>
+                  <p className="text-zinc-700 text-sm leading-relaxed">
+                    "Para garantizar el éxito de su evento de <strong>{dias} {dias === 1 ? 'día' : 'días'}</strong> con <strong>{asistentes.toLocaleString()} asistentes</strong>, hemos estructurado una inversión estratégica de <strong style={{color: '#16a34a'}}>${(+total).toLocaleString()} MXN</strong>. Esta propuesta nivel <strong>{nivel === 'premium' ? 'Premium' : 'Estándar'}</strong> no es solo un gasto logístico, sino una inversión en la retención de su audiencia y en la imagen corporativa de su marca, asegurando tecnología audiovisual de punta y una gestión operativa impecable por parte del equipo de SAC."
+                  </p>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="text-4xl font-bold text-zinc-900">${(+total).toLocaleString()} <span className="text-lg text-zinc-400 font-normal">MXN</span></div>
+                  <button className="flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-md" style={{background: '#111111'}}>
+                    Exportar PDF Oficial <Icon name="ArrowRight" size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const ScheduleView = () => (
+        <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl border border-zinc-200 text-center" style={{paddingTop: '64px', paddingBottom: '64px'}}>
+          <Icon name="CalendarDays" size={44} className="mx-auto text-zinc-300 mb-4" />
+          <h3 className="text-2xl font-bold text-zinc-900 mb-3">Agendador Integrado</h3>
+          <p className="text-zinc-400 mb-6 max-w-md mx-auto">Envía tu propuesta generada por IA junto con un link directo para que el cliente agende la llamada de revisión, sincronizado con el calendario del equipo SAC.</p>
+          <button className="inline-flex items-center gap-2 text-white px-6 py-3 rounded-md font-semibold" style={{background: '#111111'}}>
+            <Icon name="CalendarDays" size={16} /> Conectar con Google Calendar
+          </button>
+        </div>
+      );
+
+      // --- MAIN APP ---
+      const App = () => {
+        const [activeTab, setActiveTab] = useState('presentation');
+        const tabs = {
+          dashboard: 'Visión General de Eventos',
+          presentation: 'Consola de Presentaciones de Alto Valor',
+          budget: 'Generador Inteligente de Cotizaciones',
+          schedule: 'Agendador Automático',
+        };
+        return (
+          <div className="flex h-screen text-zinc-800" style={{fontFamily: "'Inter', sans-serif", background: '#f7f7f7'}}>
+            {/* Sidebar */}
+            <aside className="w-56 flex flex-col z-10" style={{background: '#111111', color: 'white', flexShrink: 0}}>
+              {/* Logo */}
+              <div className="px-5 py-6 flex items-center gap-3 border-b border-white border-opacity-10">
+                <div className="sac-mark"></div>
+                <div>
+                  <p className="font-extrabold text-white text-sm leading-tight tracking-wide">SACToolkit</p>
+                  <p className="text-xs leading-tight" style={{color: 'rgba(255,255,255,0.4)'}}>Plataforma IA v1.0</p>
+                </div>
+              </div>
+
+              <nav className="flex-1 px-3 py-4 space-y-0.5">
+                <NavItem icon="LayoutDashboard" label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+                <NavItem icon="Presentation" label="Creador de Slides" active={activeTab === 'presentation'} onClick={() => setActiveTab('presentation')} />
+                <NavItem icon="Calculator" label="Presupuestos" active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} />
+                <NavItem icon="CalendarDays" label="Agenda Automatizada" active={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')} />
+              </nav>
+
+              {/* User */}
+              <div className="px-4 py-4 border-t border-white border-opacity-10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-white text-zinc-900">Z</div>
+                  <div>
+                    <p className="font-semibold text-white text-sm leading-tight">Zac (Admin)</p>
+                    <p className="text-xs leading-tight" style={{color: 'rgba(255,255,255,0.4)'}}>Plan Pro</p>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            {/* Main */}
+            <main className="flex-1 overflow-y-auto">
+              <header className="bg-white border-b border-zinc-200 px-8 py-4 flex justify-between items-center sticky top-0 z-0">
+                <h2 className="text-base font-semibold text-zinc-900">{tabs[activeTab]}</h2>
+                <span className="text-sm text-zinc-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{background: '#22c55e'}}></span> IA Operativa
+                </span>
+              </header>
+              <div className="p-8">
+                {activeTab === 'dashboard' && <DashboardView />}
+                {activeTab === 'presentation' && <PresentationToolkit />}
+                {activeTab === 'budget' && <BudgetGenerator />}
+                {activeTab === 'schedule' && <ScheduleView />}
+              </div>
+            </main>
+          </div>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>
