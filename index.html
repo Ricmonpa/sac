@@ -176,7 +176,7 @@ Genera exactamente 5 slides que construyan una narrativa de venta persuasiva par
           const prompt = buildPrompt(formData);
           try {
             const res = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey.trim()}`,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
